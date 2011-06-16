@@ -108,7 +108,7 @@ def convert_video_ffmpeg(file_name, image_modes):
     return gen()
 
 
-def frame_iter(stream, image_modes):
+def frame_iter(stream, image_modes, mod=1):
     SEEK_START_ATTEMPTS = 3
     # Use seek to find the first good frame
     for i in range(SEEK_START_ATTEMPTS):
@@ -119,13 +119,16 @@ def frame_iter(stream, image_modes):
         else:
             break
     fps = stream.tv.get_fps()
+    cnt = 0
     while 1:
-        _, num, frame = stream.tv.get_current_frame()[:3]
-        yield num, num / fps, imfeat.convert_image(frame, image_modes)
+        if cnt % mod == 0:
+            _, num, frame = stream.tv.get_current_frame()[:3]
+            yield num, num / fps, imfeat.convert_image(frame, image_modes)
         try:
             stream.tv.get_next_frame()
         except IOError:
             break
+        cnt += 1
 
 
 def convert_video(video, modes):
@@ -145,5 +148,7 @@ def convert_video(video, modes):
             return video
         elif modes[0] == 'frameiter':
             return frame_iter(video, modes[1])
+        elif modes[0] == 'frameiterskip':
+            return frame_iter(video, modes[1], modes[2])
     else:
         raise ValueError('Unknown image type')
